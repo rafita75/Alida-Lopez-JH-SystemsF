@@ -234,6 +234,119 @@ export default function ProductsManager() {
         </div>
       )}
 
+      {/* Vista móvil (cards) - AHORA CON CONTENIDO */}
+      <div className="block lg:hidden space-y-3">
+        {products.map((product) => (
+          <div key={product._id} className="space-y-2">
+            <Card className="p-4">
+              <div className="flex gap-4">
+                {/* Imagen */}
+                <div className="w-20 h-20 flex-shrink-0">
+                  {product.thumbnail ? (
+                    <img src={product.thumbnail} alt={product.name} className="w-full h-full object-cover rounded-xl" />
+                  ) : (
+                    <div className="w-full h-full bg-gray-100 rounded-xl flex items-center justify-center text-2xl">📦</div>
+                  )}
+                </div>
+                
+                {/* Información */}
+                <div className="flex-1">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <button 
+                        onClick={(e) => product.hasVariants && toggleExpand(product._id, e)} 
+                        className="mr-1 text-gray-400"
+                      >
+                        {product.hasVariants && (expandedProducts[product._id] ? '▼' : '▶')}
+                      </button>
+                      <h3 className="font-semibold text-gray-800 inline">{product.name}</h3>
+                      <p className="text-xs text-gray-400 mt-1">SKU: {product.sku || '—'}</p>
+                    </div>
+                    <div className="text-right">
+                      {product.hasVariants && product.comparePrice > product.price ? (
+                        <p className="text-lg font-bold text-green-600">${product.price} - ${product.comparePrice}</p>
+                      ) : (
+                        <p className="text-lg font-bold text-green-600">${product.price}</p>
+                      )}
+                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${product.stock > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                        {product.stock > 0 ? `${product.stock} disponibles` : 'Agotado'}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {product.categoryId && (
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                        {product.categoryId.name}
+                      </span>
+                    )}
+                    {product.isFeatured && (
+                      <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700">
+                        ⭐ Destacado
+                      </span>
+                    )}
+                  </div>
+                  
+                  <div className="mt-3 flex gap-2">
+                    <Button size="sm" variant="outline" onClick={(e) => openEditModal(product, e)} className="flex-1">
+                      Editar
+                    </Button>
+                    <Button size="sm" variant="danger" onClick={(e) => { e.stopPropagation(); handleDelete(product._id); }}>
+                      Eliminar
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </Card>
+            
+            {/* Variantes (en móvil) */}
+            {product.hasVariants && expandedProducts[product._id] && product.variants?.map((variant, idx) => (
+              <Card key={`${product._id}-variant-${idx}`} className="ml-6 p-3 bg-gray-50">
+                <div className="flex gap-3">
+                  <div className="w-12 h-12 flex-shrink-0">
+                    {variant.image ? (
+                      <img src={variant.image} alt={variant.name} className="w-full h-full object-cover rounded-lg" />
+                    ) : (
+                      <div className="w-full h-full bg-gray-200 rounded-lg flex items-center justify-center text-lg">🎨</div>
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="text-gray-700 text-sm">
+                          <span className="text-gray-400 mr-1">↳</span>{variant.name}
+                        </p>
+                        <p className="text-xs text-gray-400">SKU: {variant.sku || '—'}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-semibold text-green-600">${variant.price || 0}</p>
+                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${variant.stock > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                          {variant.stock > 0 ? variant.stock : 0}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="mt-2 flex gap-2">
+                      <Button size="sm" variant="outline" onClick={(e) => openEditVariantModal(product, idx, e)} className="flex-1 text-xs">
+                        Editar Variante
+                      </Button>
+                      <Button size="sm" variant="danger" onClick={(e) => handleDeleteVariant(product, idx, e)} className="text-xs">
+                        Eliminar
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+        ))}
+        
+        {products.length === 0 && (
+          <div className="text-center py-12 text-gray-500 bg-white rounded-2xl border border-gray-100">
+            No hay productos creados. Haz clic en "Nuevo Producto" para comenzar.
+          </div>
+        )}
+      </div>
+
       {/* Tabla desktop */}
       <div className="hidden lg:block bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="overflow-x-auto">
@@ -292,7 +405,7 @@ export default function ProductsManager() {
                     </td>
                   </tr>
                   
-                  {/* Variantes */}
+                  {/* Variantes desktop */}
                   {product.hasVariants && expandedProducts[product._id] && product.variants?.map((variant, idx) => (
                     <tr key={`${product._id}-variant-${idx}`} className="bg-gray-50 border-b border-gray-100">
                       <td className="p-4 pl-12">
@@ -322,18 +435,11 @@ export default function ProductsManager() {
             </tbody>
           </table>
         </div>
-        {products.length === 0 && <div className="text-center py-12 text-gray-500">No hay productos creados. Haz clic en "Nuevo Producto" para comenzar.</div>}
-      </div>
-
-      {/* Vista móvil (cards) */}
-      <div className="block lg:hidden space-y-3">
-        {products.map((product) => (
-          <div key={product._id} className="space-y-2">
-            <Card className="p-4">
-              {/* ... mismo contenido pero con diseño moderno ... */}
-            </Card>
+        {products.length === 0 && (
+          <div className="text-center py-12 text-gray-500">
+            No hay productos creados. Haz clic en "Nuevo Producto" para comenzar.
           </div>
-        ))}
+        )}
       </div>
     </div>
   );

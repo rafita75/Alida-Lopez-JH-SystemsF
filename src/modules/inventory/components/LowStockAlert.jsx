@@ -36,6 +36,16 @@ export default function LowStockAlert() {
 
   const handleAdjustStock = async () => {
     if (!selectedItem) return;
+    if (adjustQuantity <= 0) {
+      alert('Ingresa una cantidad válida');
+      return;
+    }
+    
+    // 👈 VALIDACIÓN: Precio de compra obligatorio para variantes
+    if (!purchasePrice || purchasePrice <= 0) {
+      alert('⚠️ El precio de compra es obligatorio para reponer stock');
+      return;
+    }
     
     try {
       if (itemType === 'product') {
@@ -161,7 +171,9 @@ export default function LowStockAlert() {
             </p>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Cantidad a agregar *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Cantidad a agregar *
+                </label>
                 <input
                   type="number"
                   value={adjustQuantity}
@@ -171,20 +183,30 @@ export default function LowStockAlert() {
                   autoFocus
                 />
               </div>
-              {itemType === 'variant' && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Precio de compra (para gasto)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={purchasePrice}
-                    onChange={(e) => setPurchasePrice(parseFloat(e.target.value) || 0)}
-                    className="w-full p-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500"
-                    placeholder="Ej: 25.50"
-                  />
-                  <p className="text-xs text-gray-400 mt-1">💰 Se registrará automáticamente como gasto</p>
-                </div>
-              )}
+              
+              {/* 👈 CAMPO PRECIO DE COMPRA - OBLIGATORIO PARA VARIANTES */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Precio de compra {itemType === 'variant' && <span className="text-red-500">*</span>}
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={purchasePrice}
+                  onChange={(e) => setPurchasePrice(parseFloat(e.target.value) || 0)}
+                  className={`w-full p-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 ${
+                    itemType === 'variant' && !purchasePrice ? 'border-red-300 bg-red-50' : 'border-gray-200'
+                  }`}
+                  placeholder="Ej: 25.50"
+                  required={itemType === 'variant'}
+                />
+                <p className={`text-xs mt-1 ${itemType === 'variant' ? 'text-red-500' : 'text-gray-400'}`}>
+                  {itemType === 'variant' 
+                    ? '💰 Obligatorio - Se registrará como gasto en contabilidad' 
+                    : '💰 Opcional - Se registrará como gasto en contabilidad'}
+                </p>
+              </div>
+              
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Motivo / Proveedor</label>
                 <input
@@ -195,6 +217,7 @@ export default function LowStockAlert() {
                   placeholder="Ej: Compra a proveedor"
                 />
               </div>
+              
               <div className="flex gap-3 pt-2">
                 <Button variant="primary" onClick={handleAdjustStock} className="flex-1 bg-gradient-to-r from-green-600 to-green-700">
                   Agregar stock

@@ -22,8 +22,32 @@ export default function QuickSaleModal({ isOpen, onClose, onSuccess }) {
     setLoading(true);
     setError('');
     
+    // 👈 VALIDAR Y LIMPIAR EL MONTO
+    let montoLimpio = formData.monto;
+    
+    // Si es string, eliminar comas y caracteres no numéricos
+    if (typeof montoLimpio === 'string') {
+      montoLimpio = montoLimpio.replace(/[^0-9.-]/g, '');
+    }
+    
+    // Convertir a número
+    const montoNumerico = parseFloat(montoLimpio);
+    
+    // Validar
+    if (isNaN(montoNumerico) || montoNumerico <= 0) {
+      setError('Ingrese un monto válido (número positivo)');
+      setLoading(false);
+      return;
+    }
+    
+    // Limitar a 2 decimales
+    const montoFinal = Math.round(montoNumerico * 100) / 100;
+    
     try {
-      await api.post('/accounting/sale', formData);
+      await api.post('/accounting/sale', {
+        ...formData,
+        monto: montoFinal  // 👈 Enviar número limpio
+      });
       onSuccess();
       setFormData({
         monto: '',
@@ -39,6 +63,19 @@ export default function QuickSaleModal({ isOpen, onClose, onSuccess }) {
     } finally {
       setLoading(false);
     }
+  };
+
+  // 👈 Función para manejar cambio en el monto
+  const handleMontoChange = (e) => {
+    let value = e.target.value;
+    // Permitir solo números, punto y guión
+    value = value.replace(/[^0-9.-]/g, '');
+    // Evitar múltiples puntos
+    const parts = value.split('.');
+    if (parts.length > 2) {
+      value = parts[0] + '.' + parts.slice(1).join('');
+    }
+    setFormData({ ...formData, monto: value });
   };
 
   if (!isOpen) return null;
@@ -64,12 +101,11 @@ export default function QuickSaleModal({ isOpen, onClose, onSuccess }) {
         <form onSubmit={handleSubmit} className="space-y-4">
           <Input
             label="Monto"
-            type="number"
+            type="text"
             value={formData.monto}
-            onChange={(e) => setFormData({ ...formData, monto: e.target.value })}
+            onChange={handleMontoChange}
             placeholder="0.00"
             required
-            step="0.01"
             icon="💰"
           />
           

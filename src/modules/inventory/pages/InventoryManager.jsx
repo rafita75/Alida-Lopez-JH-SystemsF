@@ -59,6 +59,12 @@ export default function InventoryManager() {
       return;
     }
     
+    // 👈 VALIDACIÓN: Precio de compra obligatorio para TODOS los productos (incluye normales y variantes)
+    if (!reponerPurchasePrice || reponerPurchasePrice <= 0) {
+      alert('⚠️ El precio de compra es obligatorio para reponer stock');
+      return;
+    }
+    
     setReponerLoading(true);
     try {
       if (itemType === 'product') {
@@ -213,15 +219,17 @@ export default function InventoryManager() {
                         {product.minStock || 5}
                       </td>
                       <td className="p-3 text-center">
-                        <button
-                          onClick={() => openReponerModal(product)}
-                          className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition"
-                          title="Reponer stock"
-                        >
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                          </svg>
-                        </button>
+                        {!product.hasVariants && (
+                          <button
+                            onClick={() => openReponerModal(product)}
+                            className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition"
+                            title="Reponer stock"
+                          >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                            </svg>
+                          </button>
+                        )}
                       </td>
                     </tr>
                     
@@ -300,7 +308,9 @@ export default function InventoryManager() {
             </p>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Cantidad a agregar *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Cantidad a agregar *
+                </label>
                 <input
                   type="number"
                   value={reponerQuantity}
@@ -310,20 +320,32 @@ export default function InventoryManager() {
                   autoFocus
                 />
               </div>
+              
+              {/* 👈 CAMPO PRECIO DE COMPRA - OBLIGATORIO PARA TODOS */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Precio de compra (opcional)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Precio de compra <span className="text-red-500">*</span>
+                </label>
                 <input
                   type="number"
                   step="0.01"
                   value={reponerPurchasePrice}
                   onChange={(e) => setReponerPurchasePrice(parseFloat(e.target.value) || 0)}
-                  className="w-full p-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500"
+                  className={`w-full p-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 ${
+                    !reponerPurchasePrice ? 'border-red-300 bg-red-50' : 'border-gray-200'
+                  }`}
                   placeholder="Ej: 25.50"
+                  required
                 />
-                <p className="text-xs text-gray-400 mt-1">💰 Se registrará como gasto en contabilidad</p>
+                <p className="text-xs text-red-500 mt-1">
+                  💰 Obligatorio - Se registrará como gasto en contabilidad
+                </p>
               </div>
+              
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Motivo / Proveedor</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Motivo / Proveedor
+                </label>
                 <input
                   type="text"
                   value={reponerReason}
@@ -332,6 +354,7 @@ export default function InventoryManager() {
                   placeholder="Ej: Compra a proveedor"
                 />
               </div>
+              
               <div className="flex gap-3 pt-2">
                 <Button variant="primary" onClick={handleReponerStock} className="flex-1 bg-gradient-to-r from-green-600 to-green-700">
                   Agregar stock
