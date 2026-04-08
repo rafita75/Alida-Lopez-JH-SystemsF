@@ -204,7 +204,7 @@ export default function InventoryManager() {
                       </td>
                       <td className="p-3 text-sm text-gray-500">{product.sku || '—'}</td>
                       <td className="p-3 text-right font-semibold text-green-600">
-                        ${product.price?.toLocaleString() || 0}
+                        Q{product.price?.toLocaleString() || 0}
                       </td>
                       <td className="p-3 text-center">
                         <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
@@ -244,7 +244,7 @@ export default function InventoryManager() {
                         </td>
                         <td className="p-3 text-sm text-gray-500">{variant.sku || '—'}</td>
                         <td className="p-3 text-right font-semibold text-green-600">
-                          ${variant.price?.toLocaleString() || 0}
+                          Q{variant.price?.toLocaleString() || 0}
                         </td>
                         <td className="p-3 text-center">
                           <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${

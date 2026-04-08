@@ -328,7 +328,7 @@ export default function POS({ onClose, onSaleComplete }) {
                     {product.name}
                     {product.hasVariants && <span className="text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded-full">🔄</span>}
                   </div>
-                  <div className="text-green-600 font-bold mt-1">${product.price}</div>
+                  <div className="text-green-600 font-bold mt-1">Q{product.price}</div>
                   <div className="text-xs text-gray-400 mt-1">Stock: {product.stock}</div>
                   {product.hasVariants && (
                     <div className="text-xs text-green-500 mt-2">+ Variantes disponibles</div>
@@ -360,7 +360,7 @@ export default function POS({ onClose, onSaleComplete }) {
                     <div className="flex justify-between items-start">
                       <div className="flex-1">
                         <p className="font-medium text-gray-800">{item.name}</p>
-                        <p className="text-sm text-green-600">${item.price}</p>
+                        <p className="text-sm text-green-600">Q{item.price}</p>
                         {item.sku && <p className="text-xs text-gray-400">SKU: {item.sku}</p>}
                       </div>
                       <button onClick={() => removeFromCart(item.itemKey)} className="text-gray-400 hover:text-red-500 transition p-1">
@@ -375,7 +375,7 @@ export default function POS({ onClose, onSaleComplete }) {
                         <span className="w-8 text-center font-medium">{item.quantity}</span>
                         <button onClick={() => updateQuantity(item.itemKey, item.quantity + 1)} className="w-7 h-7 bg-gray-100 rounded-lg hover:bg-gray-200 transition">+</button>
                       </div>
-                      <span className="font-semibold text-gray-800">${(item.price * item.quantity).toLocaleString()}</span>
+                      <span className="font-semibold text-gray-800">Q{(item.price * item.quantity).toLocaleString()}</span>
                     </div>
                   </div>
                 ))
@@ -385,7 +385,7 @@ export default function POS({ onClose, onSaleComplete }) {
             <div className="border-t border-gray-200 pt-4">
               <div className="flex justify-between text-lg font-bold">
                 <span className="text-gray-600">Total</span>
-                <span className="text-green-600">${subtotal.toLocaleString()}</span>
+                <span className="text-green-600">Q{subtotal.toLocaleString()}</span>
               </div>
             </div>
 
@@ -485,7 +485,7 @@ export default function POS({ onClose, onSaleComplete }) {
                       <div className="text-xs text-gray-400">Stock: {variant.stock}</div>
                     </div>
                     <div className="text-right">
-                      <div className="text-green-600 font-bold text-lg">${variant.price}</div>
+                      <div className="text-green-600 font-bold text-lg">Q{variant.price}</div>
                       <button className="mt-2 px-4 py-1.5 bg-gradient-to-r from-green-600 to-green-700 text-white text-xs rounded-lg">
                         Agregar
                       </button>

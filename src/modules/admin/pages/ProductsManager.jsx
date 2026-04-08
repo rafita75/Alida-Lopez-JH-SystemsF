@@ -383,9 +383,9 @@ export default function ProductsManager() {
                     <td className="p-4"><span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600">{product.categoryId?.name || 'Sin categoría'}</span></td>
                     <td className="p-4 text-right">
                       {product.hasVariants && product.comparePrice > product.price ? (
-                        <><span className="font-semibold text-green-600">${product.price}</span><span className="text-xs text-gray-400 line-through ml-1">${product.comparePrice}</span></>
+                        <><span className="font-semibold text-green-600">Q{product.price}</span><span className="text-xs text-gray-400 line-through ml-1">Q{product.comparePrice}</span></>
                       ) : (
-                        <span className="font-semibold text-green-600">${product.price}</span>
+                        <span className="font-semibold text-green-600">Q{product.price}</span>
                       )}
                     </td>
                     <td className="p-4 text-center">
