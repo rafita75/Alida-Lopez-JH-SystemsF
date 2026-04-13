@@ -11,6 +11,10 @@ import SectionsManager from '../../landing/pages/SectionManager';
 import InventoryManager from '../../inventory/pages/InventoryManager';
 import POSDashboard from '../../pos/pages/POSDashboard';
 import EmployeesManager from './EmployeesManager';
+import OrdersManager from './OrdersManager';
+import CouponsManager from './CouponsManager';
+import ServicesManager from './ServicesManager';
+import BookingsManager from './BookinsManager';
 
 export default function AdminDashboard() {
   const { user, logout } = useAuth(); 
@@ -33,10 +37,20 @@ export default function AdminDashboard() {
     loading: true
   });
 
+  // ============================================
+  // DETECTAR MÓDULOS ACTIVOS
+  // ============================================
   const hasAccounting = hasModule('accounting');
-  const hasLandingCustomization = hasModule('landingCustomization');
+  // 👈 Usar modules directamente para landingCustomization
+  const hasLandingCustomization = modules?.landingCustomization === true;
   const hasPOS = hasModule('pos');
   const hasInventory = hasModule('inventory');
+  const hasEcommerce = hasModule('ecommerce');
+  const hasAppointments = hasModule('appointments');
+
+  // Debug: verificar que el módulo está activo
+  console.log('modules:', modules);
+  console.log('hasLandingCustomization:', hasLandingCustomization);
 
   useEffect(() => {
     loadData();
@@ -160,37 +174,79 @@ export default function AdminDashboard() {
   }
 
   // ============================================
-  // CONSTRUIR MENÚ SEGÚN PERMISOS
+  // CONSTRUIR MENÚ POR MÓDULOS (SEPARADO)
   // ============================================
   const menuItems = [];
 
+  // 1. Dashboard (siempre visible para admin)
   if (isAdmin) {
-    menuItems.push({ id: 'dashboard', label: 'Dashboard', icon: '📊' });
+    menuItems.push({ id: 'dashboard', label: 'Dashboard', icon: '📊', module: 'core' });
   }
 
+  // 2. Módulo de Empleados (solo admin)
   if (isAdmin) {
-    menuItems.push({ id: 'employees', label: 'Empleados', icon: '👥' });
+    menuItems.push({ id: 'employees', label: 'Empleados', icon: '👥', module: 'admin' });
   }
 
-  if (isAdmin || permissions?.canViewProducts) {
-    menuItems.push({ id: 'products', label: 'Productos', icon: '📦' });
-    menuItems.push({ id: 'categories', label: 'Categorías', icon: '🏷️' });
+  // 3. Módulo de Ecommerce (si está activo)
+  if (hasEcommerce) {
+    if (isAdmin || permissions?.canViewProducts) {
+      menuItems.push({ id: 'products', label: 'Productos', icon: '📦', module: 'ecommerce' });
+      menuItems.push({ id: 'categories', label: 'Categorías', icon: '🏷️', module: 'ecommerce' });
+    }
+    if (isAdmin || permissions?.canViewOrders) {
+      menuItems.push({ id: 'orders', label: 'Pedidos', icon: '📋', module: 'ecommerce' });
+    }
+    if (isAdmin) {
+      menuItems.push({ id: 'coupons', label: 'Cupones', icon: '🏷️', module: 'ecommerce' });
+    }
   }
 
-  if (isAdmin || permissions?.canViewInventory) {
-    menuItems.push({ id: 'inventory', label: 'Inventario', icon: '📊' });
+  // 4. Módulo de Inventario (independiente)
+  if (hasInventory && (isAdmin || permissions?.canViewInventory)) {
+    menuItems.push({ id: 'inventory', label: 'Inventario', icon: '📊', module: 'inventory' });
+    
+    if (!hasEcommerce) {
+      if (isAdmin || permissions?.canViewProducts) {
+        menuItems.push({ id: 'inv-products', label: 'Productos', icon: '📦', module: 'inventory' });
+        menuItems.push({ id: 'inv-categories', label: 'Categorías', icon: '🏷️', module: 'inventory' });
+      }
+    }
   }
 
+  // 5. Módulo de POS (independiente)
+  if (hasPOS && (isAdmin || permissions?.canUsePOS)) {
+    menuItems.push({ id: 'pos', label: 'Punto de Venta', icon: '💳', module: 'pos' });
+    
+    if (!hasEcommerce && !hasInventory) {
+      if (isAdmin || permissions?.canViewProducts) {
+        menuItems.push({ id: 'pos-products', label: 'Productos', icon: '📦', module: 'pos' });
+        menuItems.push({ id: 'pos-categories', label: 'Categorías', icon: '🏷️', module: 'pos' });
+      }
+    }
+  }
+
+  // 6. Módulo de Contabilidad (solo admin)
   if (isAdmin) {
-    menuItems.push({ id: 'accounting', label: 'Contabilidad', icon: '💰' });
+    menuItems.push({ id: 'accounting', label: 'Contabilidad', icon: '💰', module: 'accounting' });
   }
 
-  if (isAdmin || permissions?.canUsePOS) {
-    menuItems.push({ id: 'pos', label: 'Punto de Venta', icon: '💳' });
+  // 7. Módulo de Reservas (servicios y reservas)
+  if (hasAppointments) {
+    if (isAdmin || permissions?.canViewAppointments) {
+      menuItems.push({ id: 'services', label: 'Servicios', icon: '✂️', module: 'appointments' });
+      menuItems.push({ id: 'bookings', label: 'Reservas', icon: '📅', module: 'appointments' });
+    }
   }
 
+  // 8. Landing Page (solo admin) - USANDO la variable corregida
   if (hasLandingCustomization && isAdmin) {
-    menuItems.push({ id: 'landing', label: 'Landing Page', icon: '🎨' });
+    menuItems.push({ id: 'landing', label: 'Landing Page', icon: '🎨', module: 'landing' });
+  }
+
+  // 9. Módulos (solo admin)
+  if (isAdmin) {
+    menuItems.push({ id: 'modules', label: 'Módulos', icon: '🔌', module: 'core' });
   }
 
   return (
@@ -277,9 +333,10 @@ export default function AdminDashboard() {
             </button>
           )}
 
-          {/* Menú de navegación desktop */}
-          <nav className="flex-1 py-6 px-3 space-y-1 overflow-y-auto">
-            {menuItems.map((item) => (
+          {/* Menú de navegación desktop - AGRUPADO POR MÓDULOS */}
+          <nav className="flex-1 py-6 px-3 space-y-4 overflow-y-auto">
+            {/* Dashboard */}
+            {menuItems.filter(i => i.id === 'dashboard').map((item) => (
               <button
                 key={item.id}
                 onClick={() => setActiveTab(item.id)}
@@ -292,6 +349,169 @@ export default function AdminDashboard() {
               >
                 <span className="text-xl">{item.icon}</span>
                 {!sidebarCollapsed && <span className="font-medium">{item.label}</span>}
+              </button>
+            ))}
+
+            {/* Sección de Administración */}
+            {menuItems.filter(i => i.module === 'admin').length > 0 && !sidebarCollapsed && (
+              <div className="pt-2">
+                <p className="text-xs text-gray-400 uppercase tracking-wider px-3 mb-2">Administración</p>
+                {menuItems.filter(i => i.module === 'admin').map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => setActiveTab(item.id)}
+                    className={`w-full flex items-center gap-3 px-4 py-2 rounded-xl transition-all ${
+                      activeTab === item.id 
+                        ? 'bg-gradient-to-r from-green-600 to-green-700 text-white shadow-md' 
+                        : 'text-gray-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    <span className="text-lg">{item.icon}</span>
+                    <span className="font-medium text-sm">{item.label}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Sección de Tienda Online (solo si ecommerce activo) */}
+            {menuItems.filter(i => i.module === 'ecommerce').length > 0 && !sidebarCollapsed && (
+              <div className="pt-2">
+                <p className="text-xs text-gray-400 uppercase tracking-wider px-3 mb-2">Tienda Online</p>
+                {menuItems.filter(i => i.module === 'ecommerce').map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => setActiveTab(item.id)}
+                    className={`w-full flex items-center gap-3 px-4 py-2 rounded-xl transition-all ${
+                      activeTab === item.id 
+                        ? 'bg-gradient-to-r from-green-600 to-green-700 text-white shadow-md' 
+                        : 'text-gray-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    <span className="text-lg">{item.icon}</span>
+                    <span className="font-medium text-sm">{item.label}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Sección de Inventario y POS */}
+            {(menuItems.filter(i => i.module === 'inventory' || i.module === 'pos').length > 0) && !sidebarCollapsed && (
+              <div className="pt-2">
+                <p className="text-xs text-gray-400 uppercase tracking-wider px-3 mb-2">Punto de Venta</p>
+                {menuItems.filter(i => i.module === 'inventory' || i.module === 'pos').map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => setActiveTab(item.id)}
+                    className={`w-full flex items-center gap-3 px-4 py-2 rounded-xl transition-all ${
+                      activeTab === item.id 
+                        ? 'bg-gradient-to-r from-green-600 to-green-700 text-white shadow-md' 
+                        : 'text-gray-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    <span className="text-lg">{item.icon}</span>
+                    <span className="font-medium text-sm">{item.label}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Sección de Finanzas */}
+            {menuItems.filter(i => i.module === 'accounting').length > 0 && !sidebarCollapsed && (
+              <div className="pt-2">
+                <p className="text-xs text-gray-400 uppercase tracking-wider px-3 mb-2">Finanzas</p>
+                {menuItems.filter(i => i.module === 'accounting').map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => setActiveTab(item.id)}
+                    className={`w-full flex items-center gap-3 px-4 py-2 rounded-xl transition-all ${
+                      activeTab === item.id 
+                        ? 'bg-gradient-to-r from-green-600 to-green-700 text-white shadow-md' 
+                        : 'text-gray-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    <span className="text-lg">{item.icon}</span>
+                    <span className="font-medium text-sm">{item.label}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Sección de Reservas */}
+            {menuItems.filter(i => i.module === 'appointments').length > 0 && !sidebarCollapsed && (
+              <div className="pt-2">
+                <p className="text-xs text-gray-400 uppercase tracking-wider px-3 mb-2">Reservas</p>
+                {menuItems.filter(i => i.module === 'appointments').map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => setActiveTab(item.id)}
+                    className={`w-full flex items-center gap-3 px-4 py-2 rounded-xl transition-all ${
+                      activeTab === item.id 
+                        ? 'bg-gradient-to-r from-green-600 to-green-700 text-white shadow-md' 
+                        : 'text-gray-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    <span className="text-lg">{item.icon}</span>
+                    <span className="font-medium text-sm">{item.label}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Sección de Landing Page */}
+            {menuItems.filter(i => i.module === 'landing').length > 0 && !sidebarCollapsed && (
+              <div className="pt-2">
+                <p className="text-xs text-gray-400 uppercase tracking-wider px-3 mb-2">LandingPage</p>
+                {menuItems.filter(i => i.module === 'landing').map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => setActiveTab(item.id)}
+                    className={`w-full flex items-center gap-3 px-4 py-2 rounded-xl transition-all ${
+                      activeTab === item.id 
+                        ? 'bg-gradient-to-r from-green-600 to-green-700 text-white shadow-md' 
+                        : 'text-gray-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    <span className="text-lg">{item.icon}</span>
+                    <span className="font-medium text-sm">{item.label}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+            {/*
+            {/* Sección de Configuración 
+            {menuItems.filter(i => i.module === 'core' && i.id !== 'dashboard').length > 0 && !sidebarCollapsed && (
+              <div className="pt-2">
+                <p className="text-xs text-gray-400 uppercase tracking-wider px-3 mb-2">Configuración</p>
+                {menuItems.filter(i => i.module === 'core' && i.id !== 'dashboard').map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => setActiveTab(item.id)}
+                    className={`w-full flex items-center gap-3 px-4 py-2 rounded-xl transition-all ${
+                      activeTab === item.id 
+                        ? 'bg-gradient-to-r from-green-600 to-green-700 text-white shadow-md' 
+                        : 'text-gray-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    <span className="text-lg">{item.icon}</span>
+                    <span className="font-medium text-sm">{item.label}</span>
+                  </button>
+                ))}
+              </div>
+            )}*/}
+            
+            {/* Versión colapsada (sin texto) */}
+            {sidebarCollapsed && menuItems.map((item) => (
+              <button
+                key={item.id}
+                onClick={() => setActiveTab(item.id)}
+                className={`w-full flex justify-center items-center px-2 py-3 rounded-xl transition-all ${
+                  activeTab === item.id 
+                    ? 'bg-gradient-to-r from-green-600 to-green-700 text-white shadow-md' 
+                    : 'text-gray-600 hover:bg-gray-50'
+                }`}
+                title={item.label}
+              >
+                <span className="text-xl">{item.icon}</span>
               </button>
             ))}
           </nav>
@@ -331,7 +551,6 @@ export default function AdminDashboard() {
       {/* CONTENIDO PRINCIPAL */}
       {/* ============================================ */}
       <main className={`lg:pt-0 min-h-screen transition-all duration-300 ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'}`}>
-        {/* 👈 IMPORTANTE: pt-20 en móvil para que no lo tape el header, pb-20 para la barra inferior */}
         <div className="pt-20 lg:pt-6 p-4 md:p-6 pb-24 lg:pb-6">
           {message && (
             <div className="mb-6 p-4 bg-green-50 border border-green-200 text-green-700 rounded-xl">
@@ -404,28 +623,41 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
+              {/* Accesos rápidos */}
               <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
                 <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
                   <span className="w-1 h-6 bg-green-600 rounded-full"></span>
                   ⚡ Accesos rápidos
                 </h3>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  <button onClick={() => setActiveTab('pos')} className="flex flex-col items-center gap-2 p-4 bg-gray-50 rounded-xl hover:bg-green-50 hover:border-green-200 transition-all border border-transparent">
-                    <span className="text-3xl">💳</span>
-                    <span className="text-sm font-medium text-gray-700">Nueva Venta</span>
-                  </button>
-                  <button onClick={() => setActiveTab('products')} className="flex flex-col items-center gap-2 p-4 bg-gray-50 rounded-xl hover:bg-green-50 hover:border-green-200 transition-all border border-transparent">
-                    <span className="text-3xl">📦</span>
-                    <span className="text-sm font-medium text-gray-700">Productos</span>
-                  </button>
-                  <button onClick={() => setActiveTab('inventory')} className="flex flex-col items-center gap-2 p-4 bg-gray-50 rounded-xl hover:bg-green-50 hover:border-green-200 transition-all border border-transparent">
-                    <span className="text-3xl">📊</span>
-                    <span className="text-sm font-medium text-gray-700">Inventario</span>
-                  </button>
-                  <button onClick={() => setActiveTab('accounting')} className="flex flex-col items-center gap-2 p-4 bg-gray-50 rounded-xl hover:bg-green-50 hover:border-green-200 transition-all border border-transparent">
-                    <span className="text-3xl">💰</span>
-                    <span className="text-sm font-medium text-gray-700">Contabilidad</span>
-                  </button>
+                  {hasPOS && (
+                    <button onClick={() => setActiveTab('pos')} className="flex flex-col items-center gap-2 p-4 bg-gray-50 rounded-xl hover:bg-green-50 transition-all">
+                      <span className="text-3xl">💳</span>
+                      <span className="text-sm font-medium">Nueva Venta</span>
+                    </button>
+                  )}
+                  {(hasEcommerce || (!hasEcommerce && (hasInventory || hasPOS))) && (
+                    <button onClick={() => {
+                      if (hasEcommerce) setActiveTab('products');
+                      else if (hasInventory) setActiveTab('inv-products');
+                      else if (hasPOS) setActiveTab('pos-products');
+                    }} className="flex flex-col items-center gap-2 p-4 bg-gray-50 rounded-xl hover:bg-green-50 transition-all">
+                      <span className="text-3xl">📦</span>
+                      <span className="text-sm font-medium">Productos</span>
+                    </button>
+                  )}
+                  {hasInventory && (
+                    <button onClick={() => setActiveTab('inventory')} className="flex flex-col items-center gap-2 p-4 bg-gray-50 rounded-xl hover:bg-green-50 transition-all">
+                      <span className="text-3xl">📊</span>
+                      <span className="text-sm font-medium">Inventario</span>
+                    </button>
+                  )}
+                  {isAdmin && (
+                    <button onClick={() => setActiveTab('accounting')} className="flex flex-col items-center gap-2 p-4 bg-gray-50 rounded-xl hover:bg-green-50 transition-all">
+                      <span className="text-3xl">💰</span>
+                      <span className="text-sm font-medium">Contabilidad</span>
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -440,26 +672,88 @@ export default function AdminDashboard() {
             </div>
           )}
 
+          {/* ============================================ */}
+          {/* RENDERIZADO DE MÓDULOS - LÓGICA INDEPENDIENTE */}
+          {/* ============================================ */}
+          
           {/* Empleados - solo admin */}
           {activeTab === 'employees' && isAdmin && <EmployeesManager />}
 
-          {/* Productos */}
-          {activeTab === 'products' && <ProductsManager />}
-
-          {/* Categorías */}
-          {activeTab === 'categories' && <CategoriesManager />}
-
-          {/* Contabilidad - SOLO ADMIN */}
-          {activeTab === 'accounting' && isAdmin && hasAccounting && <AccountingDashboard />}
-
-          {/* Inventario */}
-          {activeTab === 'inventory' && hasInventory && <InventoryManager />}
-
-          {/* POS */}
-          {activeTab === 'pos' && hasPOS && <POSDashboard />}
+          {/* Módulos - solo admin */}
+          {activeTab === 'modules' && isAdmin && (
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+              <h2 className="text-xl font-semibold text-gray-800 mb-4">Módulos Disponibles</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {availableModules.map(module => (
+                  <div key={module.key} className="border rounded-xl p-4 hover:shadow-md transition">
+                    <div className="flex items-center gap-3">
+                      <span className="text-3xl">{module.icon}</span>
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-gray-800">{module.name}</h3>
+                        <p className="text-sm text-gray-500">{module.description}</p>
+                        <p className="text-lg font-bold text-green-600">Q{module.price}</p>
+                        
+                        {/* 👈 CONDICIÓN PARA LANDING PAGE */}
+                        {module.key === 'landingCustomization' ? (
+                          <div className="mt-2 inline-flex items-center gap-1 px-3 py-1.5 bg-yellow-100 text-yellow-700 rounded-lg text-sm">
+                            <span>🚧</span> Próximamente
+                            <span>🚧</span>
+                          </div>
+                        ) : module.isActive ? (
+                          <span className="inline-block mt-2 px-3 py-1.5 bg-green-100 text-green-700 rounded-lg text-sm">
+                            ✅ Activo
+                          </span>
+                        ) : (
+                          <button 
+                            onClick={() => setShowModal(module)} 
+                            className="mt-2 px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition"
+                          >
+                            Contratar
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Landing Page - solo admin */}
           {activeTab === 'landing' && hasLandingCustomization && isAdmin && <SectionsManager />}
+
+          {/* ============================================ */}
+          {/* ECOMMERCE - Productos y Categorías (solo si activo) */}
+          {/* ============================================ */}
+          {hasEcommerce && activeTab === 'products' && <ProductsManager />}
+          {hasEcommerce && activeTab === 'categories' && <CategoriesManager />}
+          {hasEcommerce && activeTab === 'orders' && <OrdersManager />}
+          {hasEcommerce && activeTab === 'coupons' && <CouponsManager />}
+
+          {/* ============================================ */}
+          {/* INVENTARIO - Productos y Categorías (si no hay ecommerce) */}
+          {/* ============================================ */}
+          {hasInventory && activeTab === 'inventory' && <InventoryManager />}
+          {hasInventory && !hasEcommerce && activeTab === 'inv-products' && <ProductsManager />}
+          {hasInventory && !hasEcommerce && activeTab === 'inv-categories' && <CategoriesManager />}
+
+          {/* ============================================ */}
+          {/* POS - Productos y Categorías (si no hay ecommerce ni inventario) */}
+          {/* ============================================ */}
+          {hasPOS && activeTab === 'pos' && <POSDashboard />}
+          {hasPOS && !hasEcommerce && !hasInventory && activeTab === 'pos-products' && <ProductsManager />}
+          {hasPOS && !hasEcommerce && !hasInventory && activeTab === 'pos-categories' && <CategoriesManager />}
+
+          {/* ============================================ */}
+          {/* CONTABILIDAD - Solo admin */}
+          {/* ============================================ */}
+          {isAdmin && activeTab === 'accounting' && hasAccounting && <AccountingDashboard />}
+
+          {/* ============================================ */}
+          {/* RESERVAS */}
+          {/* ============================================ */}
+          {hasAppointments && activeTab === 'services' && <ServicesManager />}
+          {hasAppointments && activeTab === 'bookings' && <BookingsManager />}
         </div>
       </main>
 
@@ -468,7 +762,7 @@ export default function AdminDashboard() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl p-6 max-w-md w-full mx-4 shadow-xl">
             <h3 className="text-xl font-semibold mb-4">Contratar {showModal.name}</h3>
-            <p className="text-gray-600 mb-4">Precio: <span className="font-bold text-green-600">${showModal.price}</span></p>
+            <p className="text-gray-600 mb-4">Precio: <span className="font-bold text-green-600">Q{showModal.price}</span></p>
             <textarea
               placeholder="¿Alguna nota adicional?"
               className="w-full p-3 border border-gray-200 rounded-xl mb-4 focus:outline-none focus:ring-2 focus:ring-green-500"

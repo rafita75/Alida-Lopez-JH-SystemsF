@@ -1,6 +1,6 @@
 // client/src/pages/Landing.jsx
 import { useEffect } from 'react';
-import { useSections } from '../modules/landing/contexts/SectionContext';
+import { useSections } from '../modules/landing/contexts/SectionContext'; 
 import SectionRenderer from '../modules/landing/components/sections/SectionRenderer';
 import MainHeader from '../modules/core/components/Layout/MainHeader';
 
